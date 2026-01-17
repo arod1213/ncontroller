@@ -7,7 +7,8 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/root.zig"),
         .target = target,
     });
-    mod.linkSystemLibrary("Core Midi", .{ .needed = true, .preferred_link_mode = .dynamic });
+    mod.linkFramework("CoreMidi", .{ .needed = true });
+    mod.linkFramework("CoreFoundation", .{ .needed = true });
 
     const exe = b.addExecutable(.{
         .name = "ncontroller",

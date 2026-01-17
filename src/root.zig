@@ -1,23 +1,35 @@
-//! By convention, root.zig is the root source file when making a library.
 const std = @import("std");
+const midi = @import("./coremidi.zig").lib;
+const print = std.debug.print;
+const Allocator = std.mem.Allocator;
+const posix = std.posix;
 
-pub fn bufferedPrint() !void {
-    // Stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    var stdout_buffer: [1024]u8 = undefined;
-    var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
-    const stdout = &stdout_writer.interface;
+const devices = @import("./devices.zig");
+const Client = devices.Client;
+const Source = devices.Source;
+const Message = devices.Message;
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+pub fn setup(reader: *std.Io.Reader) !void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
 
-    try stdout.flush(); // Don't forget to flush!
-}
+    var client = try Client.init(alloc, "ncontrol_client");
+    defer client.deinit();
 
-pub fn add(a: i32, b: i32) i32 {
-    return a + b;
-}
+    var source = try Source.init(alloc, &client, "ncontroller");
+    defer source.deinit();
 
-test "basic add functionality" {
-    try std.testing.expect(add(3, 7) == 10);
+    const ch = 0;
+    while (true) {
+        const b = reader.takeByte() catch break;
+        switch (b) {
+            'a' => try source.send(Message.vol_down.asData(ch)),
+            'b' => try source.send(Message.vol_up.asData(ch)),
+            'c' => try source.send(Message.mute.asData(ch)),
+            else => {},
+        }
+
+        std.Thread.sleep(std.time.ns_per_ms * 15);
+    }
 }
