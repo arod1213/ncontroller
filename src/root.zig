@@ -48,22 +48,22 @@ pub const MidiState = struct {
             .mute => {},
         }
 
-        std.log.info("SENT {f}\n", .{m});
+        std.log.info("SENT {f}", .{m});
         const midi_data = m.asData(self.ch);
         try self.source.send(midi_data);
     }
 };
 
-const KeyCommand = struct { []const u8, Message };
-pub fn msgFromKeys(state: *const MidiState, vals: []const u8) ?Message {
+const KeyCommand = struct { u8, ?u64, Message };
+pub fn msgFromKeys(state: *const MidiState, key: u8, flag: ?u64) ?Message {
     const cmds = [_]KeyCommand{
-        .{ &[_]u8{0}, .{ .vol = state.vol -| 1 } },
-        .{ &[_]u8{1}, .{ .vol = state.vol +| 1 } },
-        .{ &[_]u8{2}, .{ .mute = {} } },
+        .{ 111, 9437448, .{ .vol = state.vol +| 1 } }, // cmd + f12
+        .{ 103, 9437448, .{ .vol = state.vol -| 1 } }, // cmd + f11
+        .{ 109, 9437448, .{ .mute = {} } }, // cmd + f10
     };
     for (cmds) |cmd| {
-        const k, const msg = cmd;
-        if (std.mem.eql(u8, vals, k)) {
+        const k, const f, const msg = cmd;
+        if (k == key and f == flag) {
             return msg;
         }
     }
@@ -78,10 +78,9 @@ pub fn run(alloc: Allocator) !void {
     const handle = try std.Thread.spawn(.{}, keys.keyTaps, .{&queue});
     defer handle.join();
 
-    // TODO: Figure out why state is not sending MIDI to system
     while (true) {
-        if (queue.take(alloc)) |held| {
-            if (msgFromKeys(&state, held)) |msg| {
+        if (queue.take()) |cmd| {
+            if (msgFromKeys(&state, cmd.key, cmd.flags)) |msg| {
                 try state.handleMessage(msg);
             }
         }

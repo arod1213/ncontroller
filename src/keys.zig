@@ -3,60 +3,89 @@ const keys = @import("./coregraphics.zig").lib;
 const print = std.debug.print;
 const Allocator = std.mem.Allocator;
 
+pub const KeyCommand = struct {
+    key: u8,
+    flags: ?u64,
+
+    timestamp: std.time.Instant,
+
+    const Self = @This();
+    pub fn init(key: u8, flags: ?u64) !Self {
+        return .{
+            .timestamp = try std.time.Instant.now(),
+            .key = key,
+            .flags = flags,
+        };
+    }
+
+    pub fn retrigger(self: Self, other: Self) bool {
+        if (!self.eq(other)) {
+            return true;
+        }
+        const tpms: i64 = 30; // triggers per milli second
+        const ms_diff = self.timestamp.since(other.timestamp) / 1000000;
+        return tpms <= ms_diff;
+    }
+
+    pub fn eq(self: Self, other: Self) bool {
+        return self.flags == other.flags and self.key == other.key;
+    }
+
+    pub fn format(self: Self, w: *std.Io.Writer) !void {
+        try w.print("k: {d} f: {d}", .{ self.key, self.flags orelse 256 });
+    }
+};
+
 pub const KeyQueue = struct {
     alloc: Allocator,
-    keyDowns: ?std.ArrayList(u8),
-    // keyUp: u8,
+
+    prev: ?KeyCommand,
+    curr: ?KeyCommand,
+
     mu: std.Thread.Mutex,
 
     const Self = @This();
     pub fn init(alloc: Allocator) Self {
         return .{
             .alloc = alloc,
-            .keyDowns = null,
+            .prev = null,
+            .curr = null,
             .mu = std.Thread.Mutex{},
         };
     }
 
-    pub fn handleKey(self: *Self, key: u8, down: bool) !void {
+    // TODO: Prevent repeat presses of mute key command
+    pub fn handleKey(self: *Self, key: u8, flags: ?u64, down: bool) !void {
         if (down) {
-            return try self.keyDown(key);
-        } else {
-            return try self.keyUp(key);
-        }
-    }
+            self.mu.lock();
+            defer self.mu.unlock();
 
-    fn keyUp(self: *Self, key: u8) !void {
-        self.mu.lock();
-        defer self.mu.unlock();
-        if (self.keyDowns) |k| {
-            for (k.items, 0..) |val, i| {
-                if (val == key) {
-                    _ = self.keyDowns.?.orderedRemove(i);
+            const cmd = try KeyCommand.init(key, flags);
+            if (self.prev != null) {
+                // TODO: add timeout to key comamnd to allow throttled commands
+                // block repeated commands
+                if (!cmd.retrigger(self.prev.?)) {
+                    return;
                 }
             }
+
+            print("SETTING", .{});
+            self.curr = cmd;
+            return;
         }
     }
 
-    fn keyDown(self: *Self, key: u8) !void {
-        self.mu.lock();
-        defer self.mu.unlock();
-        if (self.keyDowns == null) {
-            self.keyDowns = try std.ArrayList(u8).initCapacity(self.alloc, 3);
-        }
-        try self.keyDowns.?.append(self.alloc, key);
-    }
-
-    pub fn take(self: *Self, alloc: Allocator) ?[]const u8 {
+    pub fn take(self: *Self) ?KeyCommand {
         self.mu.lock();
         defer self.mu.unlock();
 
-        if (self.keyDowns != null) {
-            const x = self.keyDowns.?.toOwnedSlice(alloc) catch return null;
-            self.keyDowns = null;
-            return x;
+        const x = self.curr;
+        // TODO: this is overriding real previous command
+        if (x != null) {
+            self.prev = x;
         }
-        return null;
+        self.curr = null;
+        return x;
     }
 };
 
@@ -70,14 +99,20 @@ fn eventCallback(
 
     switch (type_) {
         10, 11 => { // key presses
-            const keycode = keys.CGEventGetIntegerValueField( // == keycode
+            const flags = switch (keys.CGEventGetFlags(event)) {
+                256 => null,
+                else => |x| x,
+            };
+
+            const keycode = keys.CGEventGetIntegerValueField(
                 event,
                 keys.kCGKeyboardEventKeycode,
             );
+
             const is_down = type_ == 10;
 
-            // std.log.info("key {d} down {any}\n", .{ keycode, is_down });
-            queue_ptr.handleKey(@intCast(keycode), is_down) catch @panic("fucked");
+            std.log.info("key {d} flag {d}", .{ keycode, flags orelse 256 });
+            queue_ptr.handleKey(@intCast(keycode), flags, is_down) catch @panic("fucked");
         },
         else => {},
     }
@@ -109,33 +144,3 @@ pub fn keyTaps(queue: *KeyQueue) void {
     keys.CFRunLoopRun();
     std.log.info("KEY LOOP CLOSED", .{});
 }
-
-fn getModifers(alloc: Allocator) ![]const u8 {
-    var list = try std.ArrayList(u8).initCapacity(alloc, 3);
-    defer list.deinit(alloc);
-
-    for (0..128) |keycode| {
-        const is_pressed = keys.CGEventSourceKeyState(
-            keys.kCGEventSourceStateHIDSystemState,
-            @intCast(keycode),
-        );
-
-        if (is_pressed) {
-            try list.append(alloc, @intCast(keycode));
-        }
-    }
-
-    return try list.toOwnedSlice(alloc);
-}
-
-// pub fn cmdTaps(queue: *KeyQueue) void {
-//     const alloc = std.heap.page_allocator;
-//
-//     while (true) {
-//         const held = getModifers(alloc) catch return;
-//         // defer alloc.free(held);
-//
-//         queue.set(held);
-//         std.Thread.sleep(100 * std.time.ns_per_ms);
-// }
-//     }

@@ -1,0 +1,20 @@
+COMMANDS
+- RUN
+- CONFIG
+- INSPECT
+
+** RUN **
+setup midi virtual out
+launch n control
+start sending midi
+
+** CONFIG **
+ask user for key binds (vol up, vol down, mute)
+ask user for channels to send to (can be a list) // maybe separate by whitespace
+ask for retrigger speed - per command option to no retrigger
+
+
+** INSPECT ** 
+list keybinds
+list channels
+

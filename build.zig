@@ -4,6 +4,11 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const cli = b.addModule("cli", .{
+        .root_source_file = b.path("src/cli.zig"),
+        .target = target,
+    });
+
     const keys = b.addModule("keys", .{
         .root_source_file = b.path("src/keys.zig"),
         .target = target,
@@ -28,7 +33,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .imports = &.{
                 .{ .name = "ncontroller", .module = mod },
-                // .{ .name = "keys", .module = keys },
+                .{ .name = "cli", .module = cli },
             },
         }),
     });
