@@ -62,7 +62,7 @@ pub const Source = struct {
             &packetList,
             @sizeOf(midi.MIDIPacketList),
             packet,
-            0, // timestamp (0 = now)
+            0,
             msg.len,
             &msg,
         );
@@ -89,5 +89,14 @@ pub const Message = union(enum) {
             .vol => |x| midiMsg(0, track, x),
             .mute => midiMsg(1, track, 127),
         };
+    }
+
+    pub fn format(self: Self, w: *std.Io.Writer) !void {
+        switch (self) {
+            .vol => |x| {
+                try w.print("VOL to {d}", .{x});
+            },
+            .mute => try w.print("TOGGLE MUTE", .{}),
+        }
     }
 };

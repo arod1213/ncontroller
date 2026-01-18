@@ -1,7 +1,6 @@
 const std = @import("std");
 const ncontroller = @import("ncontroller");
 const posix = std.posix;
-const keys = @import("keys");
 
 fn setupTermios(handle: posix.fd_t) !void {
     var settings = try posix.tcgetattr(handle);
@@ -13,11 +12,15 @@ fn setupTermios(handle: posix.fd_t) !void {
 pub fn main() !void {
     const stdin = std.fs.File.stdin();
     try setupTermios(stdin.handle);
-    try keys.monitor();
-    //
-    // var state = ncontroller.State.init(64, 16);
     //
     // var buff: [1]u8 = undefined;
     // var reader = stdin.reader(&buff);
-    // try ncontroller.run(&reader.interface, &state);
+
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+    try ncontroller.run(alloc);
+    // try keys.monitor();
+    //
+    //
 }

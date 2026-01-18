@@ -13,6 +13,9 @@ pub fn build(b: *std.Build) void {
     const mod = b.addModule("ncontroller", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
+        .imports = &.{
+            .{ .name = "keys", .module = keys },
+        },
     });
     mod.linkFramework("CoreMidi", .{ .needed = true });
     mod.linkFramework("CoreFoundation", .{ .needed = true });
@@ -25,7 +28,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .imports = &.{
                 .{ .name = "ncontroller", .module = mod },
-                .{ .name = "keys", .module = keys },
+                // .{ .name = "keys", .module = keys },
             },
         }),
     });
