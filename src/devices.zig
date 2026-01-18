@@ -79,17 +79,15 @@ fn midiMsg(channel: u8, cc: u8, val: u8) [3]u8 {
     return [_]u8{ 0xB0 + channel, cc, val };
 }
 
-pub const Message = enum {
-    vol_up,
-    vol_down,
+pub const Message = union(enum) {
+    vol: u8,
     mute,
 
     const Self = @This();
-    pub fn asData(self: Self, ch: u8) [3]u8 {
+    pub fn asData(self: Self, track: u8) [3]u8 {
         return switch (self) {
-            .vol_up => midiMsg(ch, 0, 127),
-            .vol_down => midiMsg(ch, 0, 0),
-            .mute => midiMsg(ch, 1, 127),
+            .vol => |x| midiMsg(0, track, x),
+            .mute => midiMsg(1, track, 127),
         };
     }
 };

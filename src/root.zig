@@ -9,6 +9,49 @@ const Client = devices.Client;
 const Source = devices.Source;
 const Message = devices.Message;
 
+const State = struct {
+    vol: u8,
+    ch: u8,
+    mu: std.Thread.Mutex,
+
+    const Self = @This();
+    pub fn init(vol: u8, ch: u8) Self {
+        return .{
+            .vol = vol,
+            .ch = ch,
+            .mu = std.Thread.Mutex{},
+        };
+    }
+
+    pub fn change(self: *Self, val: i8) void {
+        self.mu.lock();
+        defer self.mu.unlock();
+
+        const cast: i8 = @intCast(self.vol);
+        const new_val = cast +| val;
+        self.vol = @intCast(new_val);
+    }
+};
+
+fn handleKeyPress(state: *State, source: *Source, key: u8) !void {
+    const data: ?Message = switch (key) {
+        'a' => blk: {
+            state.change(-1);
+            break :blk .{ .vol = state.vol };
+        },
+        's' => blk: {
+            state.change(1);
+            break :blk .{ .vol = state.vol };
+        },
+        'd' => .{ .mute = {} },
+        else => null,
+    };
+
+    if (data) |d| {
+        try source.send(d.asData(state.ch));
+    }
+}
+
 pub fn setup(reader: *std.Io.Reader) !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
@@ -20,16 +63,10 @@ pub fn setup(reader: *std.Io.Reader) !void {
     var source = try Source.init(alloc, &client, "ncontroller");
     defer source.deinit();
 
-    const ch = 0;
+    var state = State.init(64, 16);
     while (true) {
         const b = reader.takeByte() catch break;
-        switch (b) {
-            'a' => try source.send(Message.vol_down.asData(ch)),
-            'b' => try source.send(Message.vol_up.asData(ch)),
-            'c' => try source.send(Message.mute.asData(ch)),
-            else => {},
-        }
-
-        std.Thread.sleep(std.time.ns_per_ms * 15);
+        try handleKeyPress(&state, &source, b);
+        std.Thread.sleep(std.time.ns_per_ms * 3);
     }
 }
