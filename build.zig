@@ -3,6 +3,13 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
+    const keys = b.addModule("keys", .{
+        .root_source_file = b.path("src/keys.zig"),
+        .target = target,
+    });
+    keys.linkFramework("CoreGraphics", .{ .needed = true });
+
     const mod = b.addModule("ncontroller", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
@@ -18,6 +25,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .imports = &.{
                 .{ .name = "ncontroller", .module = mod },
+                .{ .name = "keys", .module = keys },
             },
         }),
     });

@@ -9,7 +9,7 @@ const Client = devices.Client;
 const Source = devices.Source;
 const Message = devices.Message;
 
-const State = struct {
+pub const State = struct {
     vol: u8,
     ch: u8,
     mu: std.Thread.Mutex,
@@ -52,7 +52,7 @@ fn handleKeyPress(state: *State, source: *Source, key: u8) !void {
     }
 }
 
-pub fn setup(reader: *std.Io.Reader) !void {
+pub fn run(reader: *std.Io.Reader, state: *State) !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
@@ -63,10 +63,9 @@ pub fn setup(reader: *std.Io.Reader) !void {
     var source = try Source.init(alloc, &client, "ncontroller");
     defer source.deinit();
 
-    var state = State.init(64, 16);
     while (true) {
         const b = reader.takeByte() catch break;
-        try handleKeyPress(&state, &source, b);
+        try handleKeyPress(state, &source, b);
         std.Thread.sleep(std.time.ns_per_ms * 3);
     }
 }
