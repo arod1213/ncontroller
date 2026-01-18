@@ -78,6 +78,7 @@ pub fn run(alloc: Allocator) !void {
     const handle = try std.Thread.spawn(.{}, keys.keyTaps, .{&queue});
     defer handle.join();
 
+    // TODO: Figure out why state is not sending MIDI to system
     while (true) {
         if (queue.take(alloc)) |held| {
             if (msgFromKeys(&state, held)) |msg| {
