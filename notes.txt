@@ -15,6 +15,19 @@ ask for retrigger speed - per command option to no retrigger
 
 
 ** INSPECT ** 
-list keybinds
+list keybinds + throttling speeds
 list channels
+
+
+** FLOW **
+key binds for (vol up, vol down, mute)
+CGEvent sends found key bind
+
+On Mount:
+read config.txt
+save (key, flag) -> message
+setup midi
+read CGEvent -> (key, flag)
+check if (key, flag) should retrigger
+if so, send message
 

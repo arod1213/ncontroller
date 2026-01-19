@@ -1,4 +1,5 @@
 const std = @import("std");
+const print = std.debug.print;
 const ncontroller = @import("ncontroller");
 const cli = @import("cli");
 const posix = std.posix;

@@ -1,87 +1,40 @@
 const std = @import("std");
-const midi = @import("./coremidi.zig").lib;
 const print = std.debug.print;
 const Allocator = std.mem.Allocator;
 const posix = std.posix;
 
-const devices = @import("./devices.zig");
-const Client = devices.Client;
-const Source = devices.Source;
-const Message = devices.Message;
 const keys = @import("keys");
+const config = keys.config;
 const KeyQueue = keys.KeyQueue;
 
-pub const MidiState = struct {
-    mu: std.Thread.Mutex,
+const midi = @import("midi");
+const Client = midi.Client;
+const Source = midi.Source;
+const Message = midi.Message;
+const MidiState = midi.MidiState;
 
-    vol: u8,
-    ch: u8,
-
-    client: *Client,
-    source: *Source,
-
-    const Self = @This();
-    pub fn init(alloc: Allocator, vol: u8, ch: u8) Self {
-        var c = Client.init(alloc, "ncontrol_client") catch @panic("failed to set client");
-        var s = Source.init(alloc, &c, "ncontroller") catch @panic("failed to set source");
-
-        return .{
-            .mu = std.Thread.Mutex{},
-            .vol = vol,
-            .ch = ch,
-            .client = &c,
-            .source = &s,
-        };
-    }
-
-    pub fn deinit(self: *Self) void {
-        self.source.deinit();
-        self.client.deinit();
-    }
-
-    pub fn handleMessage(self: *Self, m: Message) !void {
-        self.mu.lock();
-        defer self.mu.unlock();
-
-        switch (m) {
-            .vol => |x| self.vol = x,
-            .mute => {},
-        }
-
-        std.log.info("SENT {f}", .{m});
-        const midi_data = m.asData(self.ch);
-        try self.source.send(midi_data);
-    }
-};
-
-const KeyCommand = struct { u8, ?u64, Message };
-pub fn msgFromKeys(state: *const MidiState, key: u8, flag: ?u64) ?Message {
-    const cmds = [_]KeyCommand{
-        .{ 111, 9437448, .{ .vol = state.vol +| 1 } }, // cmd + f12
-        .{ 103, 9437448, .{ .vol = state.vol -| 1 } }, // cmd + f11
-        .{ 109, 9437448, .{ .mute = {} } }, // cmd + f10
+fn cmdToMessage(state: *const MidiState, cmd: config.Command) Message {
+    return switch (cmd) {
+        .vol_up => |x| Message{ .vol = state.vol +| x },
+        .vol_down => |x| Message{ .vol = state.vol -| x },
+        .mute => Message{ .mute = {} },
     };
-    for (cmds) |cmd| {
-        const k, const f, const msg = cmd;
-        if (k == key and f == flag) {
-            return msg;
-        }
-    }
-    return null;
 }
 
 pub fn run(alloc: Allocator) !void {
     var state = MidiState.init(alloc, 64, 1);
-    var queue = KeyQueue.init(alloc);
+    const settings = try config.read.readConfig();
+    var queue = KeyQueue.init(alloc, settings);
     _ = &state;
 
-    const handle = try std.Thread.spawn(.{}, keys.keyTaps, .{&queue});
+    const handle = try std.Thread.spawn(.{}, keys.handleKeys, .{&queue});
     defer handle.join();
 
     while (true) {
-        if (queue.take()) |cmd| {
-            if (msgFromKeys(&state, cmd.key, cmd.flags)) |msg| {
-                try state.handleMessage(msg);
+        if (queue.take()) |press| {
+            std.log.info("press is {f}\n", .{press.key});
+            if (queue.settings.cmdFromKey(press)) |cmd| {
+                try state.handleMessage(cmdToMessage(&state, cmd.cmd));
             }
         }
         std.Thread.sleep(std.time.ns_per_ms * 3);
