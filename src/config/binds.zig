@@ -92,7 +92,7 @@ pub const KeyCommand = struct {
         if (!curr.key.eq(prev.?.key)) {
             return true;
         } else if (self.retrigger == false) {
-            std.log.info("blocking retrig because {f} {f}\n", .{ curr.key, prev.?.key });
+            std.log.info("blocking retrig because {f} {f}", .{ curr.key, prev.?.key });
             return false;
         }
 

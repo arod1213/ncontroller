@@ -15,9 +15,9 @@ fn getConfig(alloc: Allocator) !config.Config {
     var i: usize = 0;
     while (i < 3) : (i += 1) {
         switch (i) {
-            0 => print("please choose a key for vol up: \r", .{}),
-            1 => print("please choose a key for vol down: \r ", .{}),
-            2 => print("please choose a key for vol mute: \r", .{}),
+            0 => print("\r\x1b[2Kplease choose a key for vol up:", .{}),
+            1 => print("\r\x1b[2Kplease choose a key for vol down:", .{}),
+            2 => print("\r\x1b[2Kplease choose a key for vol mute:\n", .{}),
             else => {},
         }
         blk: while (true) {
@@ -38,7 +38,7 @@ fn getConfig(alloc: Allocator) !config.Config {
 
 pub fn run(alloc: Allocator) !void {
     const c = try getConfig(alloc);
-    print("config is \n{f}\n", .{c});
+    print("key binds set\n", .{});
     const cwd = std.fs.cwd();
     var file = try cwd.createFile("./config.txt", .{});
     var buff: [64]u8 = undefined;
