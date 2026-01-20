@@ -15,9 +15,9 @@ fn getConfig(alloc: Allocator) !config.Config {
     var i: usize = 0;
     while (i < 3) : (i += 1) {
         switch (i) {
-            0 => print("please choose a key for vol up: ", .{}),
-            1 => print("please choose a key for vol down: ", .{}),
-            2 => print("please choose a key for vol mute: ", .{}),
+            0 => print("please choose a key for vol up: \r", .{}),
+            1 => print("please choose a key for vol down: \r ", .{}),
+            2 => print("please choose a key for vol mute: \r", .{}),
             else => {},
         }
         blk: while (true) {

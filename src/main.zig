@@ -27,22 +27,9 @@ pub fn main() !void {
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const args = try std.process.argsAlloc(alloc);
-    if (args.len < 2) {
-        print("please provide args", .{});
-        return;
+    const mode = try cli.chooseMode(alloc);
+    switch (mode) {
+        .config => try ncontroller.setup.run(alloc),
+        .run => try ncontroller.run(alloc),
     }
-    const cmd = args[1];
-    if (std.mem.eql(u8, cmd, "config")) {
-        print("setting up config", .{});
-        try ncontroller.setup.run(alloc);
-    } else {
-        try ncontroller.run(alloc);
-    }
-
-    // _ = try cli.setup(alloc, &reader.interface, &writer.interface);
-
-    // try keys.monitor();
-    //
-    //
 }
