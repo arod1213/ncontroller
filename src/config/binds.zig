@@ -47,8 +47,9 @@ pub const KeyPress = struct {
 };
 
 pub const Command = union(enum) {
-    vol_up: u8,
-    vol_down: u8,
+    vol_up: u7,
+    vol_down: u7,
+    default_vol: u7,
     mute,
 
     const Self = @This();
@@ -56,6 +57,7 @@ pub const Command = union(enum) {
         switch (self) {
             .vol_up => |x| try w.print("vol up by {d}\n", .{x}),
             .vol_down => |x| try w.print("vol down by {d}\n", .{x}),
+            .default_vol => |x| try w.print("set to default vol {d}\n", .{x}),
             .mute => try w.print("toggle mute\n", .{}),
         }
     }
@@ -103,12 +105,18 @@ pub const KeyCommand = struct {
 pub const Config = struct {
     vol_up: KeyCommand,
     vol_down: KeyCommand,
+    default_vol: KeyCommand,
     mute: KeyCommand,
 
     const Self = @This();
 
     pub fn default() Self {
         return .{
+            .default_vol = KeyCommand.init(
+                .{ .val = 111, .flags = null, .down = true },
+                .{ .default_vol = 64 },
+                false,
+            ),
             .vol_up = KeyCommand.init(
                 .{ .val = 111, .flags = 9437448, .down = true },
                 .{ .vol_up = 1 },
@@ -134,6 +142,8 @@ pub const Config = struct {
             return self.vol_down;
         } else if (self.mute.eq(key)) {
             return self.mute;
+        } else if (self.default_vol.eq(key)) {
+            return self.default_vol;
         }
         return null;
     }
@@ -142,6 +152,7 @@ pub const Config = struct {
         try w.print("VOL_UP: {d} {d}\n", .{ self.vol_up.key.val, self.vol_up.key.flags orelse 256 });
         try w.print("VOL_DOWN: {d} {d}\n", .{ self.vol_down.key.val, self.vol_down.key.flags orelse 256 });
         try w.print("MUTE: {d} {d}\n", .{ self.mute.key.val, self.mute.key.flags orelse 256 });
+        try w.print("VOL_DEFAULT: {d} {d}\n", .{ self.default_vol.key.val, self.default_vol.key.flags orelse 256 });
         try w.flush();
     }
 
@@ -149,5 +160,6 @@ pub const Config = struct {
         try w.print("vol up is {f}\n", .{self.vol_up.key});
         try w.print("vol down is {f}\n", .{self.vol_down.key});
         try w.print("mute is {f}\n", .{self.mute.key});
+        try w.print("default vol is {f}\n", .{self.default_vol.key});
     }
 };

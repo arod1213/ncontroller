@@ -4,6 +4,7 @@ const print = std.debug.print;
 
 const binds = @import("./binds.zig");
 const KeyCommand = binds.KeyCommand;
+const Key = binds.Key;
 const Config = binds.Config;
 
 fn getInfo(line: []const u8) !struct { u8, ?u64 } {
@@ -23,32 +24,32 @@ pub fn readConfig() !Config {
     const file = try cwd.openFile("./config.txt", .{});
     defer file.close();
 
-    var buffer: [64]u8 = undefined;
+    var buffer: [256]u8 = undefined;
     const bytes = try file.readAll(&buffer);
     const data = buffer[0..bytes];
 
     var config = Config.default();
 
+    // TODO: be careful of buffer overflow (some settings may not get set)
     var iter = std.mem.splitAny(u8, data, "\n");
     while (iter.next()) |item| {
         if (std.mem.startsWith(u8, item, "VOL_UP:")) {
             const key, const flag = try getInfo(item[8..]);
-
             config.vol_up.key = .{ .val = key, .flags = flag, .down = true };
-
             std.log.info("SET {d} and {d}\n", .{ key, flag orelse 256 });
         } else if (std.mem.startsWith(u8, item, "VOL_DOWN:")) {
             const key, const flag = try getInfo(item[10..]);
-
             config.vol_down.key = .{ .val = key, .flags = flag, .down = true };
-
             std.log.info("SET {d} and {d}\n", .{ key, flag orelse 256 });
         } else if (std.mem.startsWith(u8, item, "MUTE:")) {
             const key, const flag = try getInfo(item[6..]);
-
             config.mute.key = .{ .val = key, .flags = flag, .down = true };
             config.mute.retrigger = false;
-
+            std.log.info("SET {d} and {d}\n", .{ key, flag orelse 256 });
+        } else if (std.mem.startsWith(u8, item, "VOL_DEFAULT:")) {
+            const key, const flag = try getInfo(item[13..]);
+            config.default_vol.key = .{ .val = key, .flags = flag, .down = true };
+            config.default_vol.retrigger = false;
             std.log.info("SET {d} and {d}\n", .{ key, flag orelse 256 });
         }
     }

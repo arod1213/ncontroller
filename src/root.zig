@@ -18,6 +18,7 @@ fn cmdToMessage(state: *const MidiState, cmd: config.Command) Message {
     return switch (cmd) {
         .vol_up => |x| Message{ .vol = state.vol +| x },
         .vol_down => |x| Message{ .vol = state.vol -| x },
+        .default_vol => |x| Message{ .vol = x },
         .mute => Message{ .mute = {} },
     };
 }

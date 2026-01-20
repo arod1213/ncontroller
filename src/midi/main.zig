@@ -12,14 +12,14 @@ pub const Message = devices.Message;
 pub const MidiState = struct {
     mu: std.Thread.Mutex,
 
-    vol: u8,
-    ch: u8,
+    vol: u7, // 0 to 127
+    ch: u4, // 0 to 16
 
     client: *Client,
     source: *Source,
 
     const Self = @This();
-    pub fn init(alloc: Allocator, vol: u8, ch: u8) Self {
+    pub fn init(alloc: Allocator, vol: u7, ch: u4) Self {
         var c = Client.init(alloc, "ncontrol_client") catch @panic("failed to set client");
         var s = Source.init(alloc, &c, "ncontroller") catch @panic("failed to set source");
 

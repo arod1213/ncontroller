@@ -13,11 +13,12 @@ fn getConfig(alloc: Allocator) !config.Config {
     var settings = config.Config.default();
 
     var i: usize = 0;
-    while (i < 3) : (i += 1) {
+    while (i < 4) : (i += 1) {
         switch (i) {
             0 => print("\r\x1b[2Kplease choose a key for vol up:", .{}),
             1 => print("\r\x1b[2Kplease choose a key for vol down:", .{}),
             2 => print("\r\x1b[2Kplease choose a key for vol mute:\n", .{}),
+            3 => print("\r\x1b[2Kplease choose a key for default vol:\n", .{}),
             else => {},
         }
         blk: while (true) {
@@ -26,6 +27,7 @@ fn getConfig(alloc: Allocator) !config.Config {
                     0 => settings.vol_up.key = press.key,
                     1 => settings.vol_down.key = press.key,
                     2 => settings.mute.key = press.key,
+                    3 => settings.default_vol.key = press.key,
                     else => break :blk,
                 }
                 break;
@@ -33,6 +35,7 @@ fn getConfig(alloc: Allocator) !config.Config {
             std.Thread.sleep(std.time.ns_per_ms * 10);
         }
     }
+    print("config is \n{f}\n", .{settings});
     return settings;
 }
 
