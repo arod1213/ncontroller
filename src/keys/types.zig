@@ -1,5 +1,6 @@
 const std = @import("std");
 const keys = @import("./coregraphics.zig").lib;
+const print = std.debug.print;
 const Allocator = std.mem.Allocator;
 
 pub const config = @import("config");
@@ -14,10 +15,11 @@ pub const KeyQueue = struct {
     mu: std.Thread.Mutex,
 
     const Self = @This();
-    pub fn init(alloc: Allocator, settings: config.Config) Self {
+    pub fn init(alloc: Allocator, settings: ?config.Config) Self {
+        const s = if (settings == null) config.Config.default() else settings.?;
         return .{
             .alloc = alloc,
-            .settings = settings,
+            .settings = s,
             .prev = null,
             .curr = null,
             .mu = std.Thread.Mutex{},
@@ -26,19 +28,22 @@ pub const KeyQueue = struct {
 
     // TODO: Prevent repeat presses of mute key command
     pub fn handleKey(self: *Self, press: config.KeyPress) !void {
+        self.mu.lock();
+        defer self.mu.unlock();
         if (press.key.down) {
-            self.mu.lock();
-            defer self.mu.unlock();
-
             if (self.settings.cmdFromKey(press)) |cmd| {
-                if (self.prev != null and !cmd.shouldTrigger(press, self.prev.?)) {
+                if (self.prev != null and !cmd.shouldTrigger(press, self.prev)) {
                     return; // prevent retrigger
                 }
             }
-
-            std.log.info("SETTING", .{});
             self.curr = press;
             return;
+        } else {
+            if (self.prev) |prev| {
+                if (press.key.eq(prev.key)) {
+                    self.prev = null;
+                }
+            }
         }
     }
 

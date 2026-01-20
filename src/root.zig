@@ -8,6 +8,7 @@ const config = keys.config;
 const KeyQueue = keys.KeyQueue;
 
 const midi = @import("midi");
+pub const setup = @import("./setup.zig");
 const Client = midi.Client;
 const Source = midi.Source;
 const Message = midi.Message;
@@ -32,7 +33,7 @@ pub fn run(alloc: Allocator) !void {
 
     while (true) {
         if (queue.take()) |press| {
-            std.log.info("press is {f}\n", .{press.key});
+            // std.log.info("press is {f}\n", .{press.key});
             if (queue.settings.cmdFromKey(press)) |cmd| {
                 try state.handleMessage(cmdToMessage(&state, cmd.cmd));
             }

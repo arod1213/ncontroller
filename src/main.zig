@@ -14,6 +14,7 @@ fn setupTermios(handle: posix.fd_t) !void {
 pub fn main() !void {
     const stdin = std.fs.File.stdin();
     try setupTermios(stdin.handle);
+
     //
     // var buff: [64]u8 = undefined;
     // var reader = stdin.reader(&buff);
@@ -26,9 +27,21 @@ pub fn main() !void {
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const args = try std.process.argsAlloc(alloc);
+    if (args.len < 2) {
+        print("please provide args", .{});
+        return;
+    }
+    const cmd = args[1];
+    if (std.mem.eql(u8, cmd, "config")) {
+        print("setting up config", .{});
+        try ncontroller.setup.run(alloc);
+    } else {
+        try ncontroller.run(alloc);
+    }
+
     // _ = try cli.setup(alloc, &reader.interface, &writer.interface);
 
-    try ncontroller.run(alloc);
     // try keys.monitor();
     //
     //

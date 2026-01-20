@@ -1,6 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
+const print = std.debug.print;
 
 pub const Key = struct {
     val: u8,
@@ -17,7 +18,10 @@ pub const Key = struct {
     }
 
     pub fn eq(self: Self, other: Self) bool {
-        return self.flags == other.flags and self.val == other.val;
+        const a = self.flags orelse 256;
+        const b = other.flags orelse 256;
+
+        return a == b and self.val == other.val;
     }
 
     pub fn format(self: Self, w: *std.Io.Writer) !void {
@@ -61,7 +65,7 @@ pub const KeyCommand = struct {
     key: Key,
     cmd: Command,
     retrigger: bool,
-    trigger_per_ms: u64 = 300,
+    trigger_per_ms: u64 = 40,
 
     const Self = @This();
     pub fn init(press: Key, cmd: Command, retrigger: bool) Self {
@@ -80,15 +84,19 @@ pub const KeyCommand = struct {
         try w.print("key: {f} cmd: {f} retrig {any}", .{ self.key, self.cmd, self.retrigger });
     }
 
-    pub fn shouldTrigger(self: Self, curr: KeyPress, prev: KeyPress) bool {
-        if (!self.key.eq(curr.key)) {
+    pub fn shouldTrigger(self: Self, curr: KeyPress, prev: ?KeyPress) bool {
+        if (prev == null) {
+            return true;
+        }
+
+        if (!curr.key.eq(prev.?.key)) {
             return true;
         } else if (self.retrigger == false) {
+            std.log.info("blocking retrig because {f} {f}\n", .{ curr.key, prev.?.key });
             return false;
         }
 
-        const trig_per_ms: u64 = 300;
-        return trig_per_ms <= curr.ms_diff(prev);
+        return self.trigger_per_ms <= curr.ms_diff(prev.?);
     }
 };
 
@@ -128,5 +136,18 @@ pub const Config = struct {
             return self.mute;
         }
         return null;
+    }
+
+    pub fn writeOut(self: Self, w: *std.Io.Writer) !void {
+        try w.print("VOL_UP: {d} {d}\n", .{ self.vol_up.key.val, self.vol_up.key.flags orelse 256 });
+        try w.print("VOL_DOWN: {d} {d}\n", .{ self.vol_down.key.val, self.vol_down.key.flags orelse 256 });
+        try w.print("MUTE: {d} {d}\n", .{ self.mute.key.val, self.mute.key.flags orelse 256 });
+        try w.flush();
+    }
+
+    pub fn format(self: Self, w: *std.Io.Writer) !void {
+        try w.print("vol up is {f}\n", .{self.vol_up.key});
+        try w.print("vol down is {f}\n", .{self.vol_down.key});
+        try w.print("mute is {f}\n", .{self.mute.key});
     }
 };

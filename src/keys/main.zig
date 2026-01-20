@@ -27,7 +27,7 @@ fn eventCallback(
 
             const is_down = type_ == 10;
 
-            std.log.info("key {d} flag {d}", .{ keycode, flags orelse 256 });
+            // std.log.info("key {d} flag {d}", .{ keycode, flags orelse 256 });
             const key_press = config.KeyPress.init(.{
                 .val = @intCast(keycode),
                 .flags = flags,
