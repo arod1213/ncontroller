@@ -11,13 +11,13 @@ pub const Client = struct {
 
     const Self = @This();
 
-    pub fn init(alloc: Allocator, name: []const u8) !Self {
-        const ptr: *c.MIDIClientRef = try alloc.create(c.MIDIClientRef);
+    pub fn init(name: []const u8) !Self {
         const tag = utils.strToCFString(name);
+        var client_ref: c.MIDIClientRef = undefined;
+        try utils.cTry(c.MIDIClientCreate(tag, null, null, &client_ref));
 
-        try utils.cTry(c.MIDIClientCreate(tag, null, null, ptr));
         return .{
-            .ptr = ptr.*,
+            .ptr = client_ref,
             .name = tag,
         };
     }
@@ -34,17 +34,13 @@ pub const Source = struct {
 
     const Self = @This();
 
-    pub fn init(alloc: Allocator, client: *const Client, name: []const u8) !Self {
-        const ptr: *c.MIDIEndpointRef = try alloc.create(c.MIDIEndpointRef);
+    pub fn init(client: *const Client, name: []const u8) !Self {
         const tag = utils.strToCFString(name);
-
-        const result = c.MIDISourceCreate(client.ptr, tag, ptr);
-        std.debug.print("MIDISourceCreate result: {}\n", .{result});
-        std.debug.print("Virtual device pointer: {*}\n", .{ptr});
-        try utils.cTry(result);
+        var client_ref: c.MIDIClientRef = undefined;
+        try utils.cTry(c.MIDISourceCreate(client.ptr, tag, &client_ref));
 
         return .{
-            .ptr = ptr.*,
+            .ptr = client_ref,
             .name = tag,
             .client = client.ptr,
         };

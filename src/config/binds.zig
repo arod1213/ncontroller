@@ -67,7 +67,7 @@ pub const KeyCommand = struct {
     key: Key,
     cmd: Command,
     retrigger: bool,
-    trigger_per_ms: u64 = 40,
+    trigger_per_ms: u64 = 50,
 
     const Self = @This();
     pub fn init(press: Key, cmd: Command, retrigger: bool) Self {

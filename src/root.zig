@@ -24,7 +24,7 @@ fn cmdToMessage(state: *const MidiState, cmd: config.Command) Message {
 }
 
 pub fn run(alloc: Allocator) !void {
-    var state = MidiState.init(alloc, 64, 1);
+    var state = MidiState.init(64, 1);
     const settings = try config.read.readConfig();
     var queue = KeyQueue.init(alloc, settings);
     _ = &state;

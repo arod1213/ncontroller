@@ -15,20 +15,20 @@ pub const MidiState = struct {
     vol: u7, // 0 to 127
     ch: u4, // 0 to 16
 
-    client: *Client,
-    source: *Source,
+    client: Client,
+    source: Source,
 
     const Self = @This();
-    pub fn init(alloc: Allocator, vol: u7, ch: u4) Self {
-        var c = Client.init(alloc, "ncontrol_client") catch @panic("failed to set client");
-        var s = Source.init(alloc, &c, "ncontroller") catch @panic("failed to set source");
+    pub fn init(vol: u7, ch: u4) Self {
+        const c = Client.init("ncontrol_client") catch @panic("failed to set client");
+        const s = Source.init(&c, "ncontroller") catch @panic("failed to set source");
 
         return .{
             .mu = std.Thread.Mutex{},
             .vol = vol,
             .ch = ch,
-            .client = &c,
-            .source = &s,
+            .client = c,
+            .source = s,
         };
     }
 
@@ -48,7 +48,10 @@ pub const MidiState = struct {
 
         std.log.info("SENT {f}", .{m});
         const midi_data = m.asData(self.ch);
-        try self.source.send(midi_data);
+        self.source.send(midi_data) catch |e| {
+            std.log.err("failed to send midi: {any}", .{e});
+            return;
+        };
     }
 };
 
