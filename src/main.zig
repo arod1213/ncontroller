@@ -15,14 +15,6 @@ pub fn main() !void {
     const stdin = std.fs.File.stdin();
     try setupTermios(stdin.handle);
 
-    //
-    // var buff: [64]u8 = undefined;
-    // var reader = stdin.reader(&buff);
-
-    // const stdout = std.fs.File.stdout();
-    // var out_buf: [64]u8 = undefined;
-    // var writer = stdout.writer(&out_buf);
-
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
@@ -31,5 +23,6 @@ pub fn main() !void {
     switch (mode) {
         .config => try ncontroller.setup.run(alloc),
         .run => try ncontroller.run(alloc),
+        .testing => try ncontroller.testing(),
     }
 }

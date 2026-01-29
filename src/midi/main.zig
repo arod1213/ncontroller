@@ -8,6 +8,7 @@ const devices = @import("./devices.zig");
 pub const Client = devices.Client;
 pub const Source = devices.Source;
 pub const Message = devices.Message;
+pub const midiMsg = devices.midiMsg;
 
 pub const MidiState = struct {
     mu: std.Thread.Mutex,
@@ -35,6 +36,16 @@ pub const MidiState = struct {
     pub fn deinit(self: *Self) void {
         self.source.deinit();
         self.client.deinit();
+    }
+
+    pub fn handleMidi(self: *Self, data: [3]u8) !void {
+        self.mu.lock();
+        defer self.mu.unlock();
+
+        self.source.send(data) catch |e| {
+            std.log.err("failed to send midi: {any}", .{e});
+            return;
+        };
     }
 
     pub fn handleMessage(self: *Self, m: Message) !void {

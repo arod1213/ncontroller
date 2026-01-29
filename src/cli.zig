@@ -11,7 +11,7 @@ pub const KeyBindings = struct {
     mute: KeyCommand,
 };
 
-pub const Mode = enum { config, run };
+pub const Mode = enum { config, testing, run };
 pub fn chooseMode(alloc: Allocator) !Mode {
     const args = try std.process.argsAlloc(alloc);
     if (args.len < 2) {
@@ -20,6 +20,8 @@ pub fn chooseMode(alloc: Allocator) !Mode {
     const cmd = args[1];
     if (std.mem.eql(u8, cmd, "config")) {
         return .config;
+    } else if (std.mem.eql(u8, cmd, "testing")) {
+        return .testing;
     } else {
         return .run;
     }

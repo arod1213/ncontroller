@@ -1,0 +1,3 @@
+REMOVE KEY REPEAT BEHAVIOR
+move to while held retrigger given retrig speed
+block any duplicate commands from key repeat

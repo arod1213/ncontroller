@@ -71,7 +71,7 @@ pub const Source = struct {
     }
 };
 
-fn midiMsg(channel: u8, cc: u8, val: u8) [3]u8 {
+pub fn midiMsg(channel: u8, cc: u8, val: u8) [3]u8 {
     return [_]u8{ 0xB0 + channel, cc, val };
 }
 

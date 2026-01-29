@@ -43,3 +43,26 @@ pub fn run(alloc: Allocator) !void {
     }
     std.log.info("FINISHED", .{});
 }
+
+pub fn testing() !void {
+    print("TESTING", .{});
+    var state = MidiState.init(64, 1);
+    _ = &state;
+
+    for (0..16) |chan| {
+        for (0..127) |cc| {
+            std.log.info("running chan {d} cc {d}", .{ chan, cc });
+
+            const down = midi.midiMsg(@intCast(chan), @intCast(cc), 0);
+            try state.handleMidi(down);
+
+            std.Thread.sleep(std.time.ns_per_ms * 50);
+
+            const up = midi.midiMsg(@intCast(chan), @intCast(cc), 127);
+            try state.handleMidi(up);
+
+            std.Thread.sleep(std.time.ns_per_ms * 50);
+        }
+    }
+    std.log.info("FINISHED", .{});
+}
