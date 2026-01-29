@@ -52,16 +52,20 @@ pub fn readConfig(alloc: Allocator) !Config {
             config.default_vol.retrigger = false;
             std.log.info("SET {d} and {d}\n", .{ key, flag orelse 256 });
         } else if (std.mem.startsWith(u8, item, "CHANNELS:")) {
-            var iterator = std.mem.splitAny(u8, item[11..], " ");
+            var iterator = std.mem.splitAny(u8, item[10..], " ");
             var list = try std.ArrayList(u4).initCapacity(alloc, 2);
-            defer list.deinit();
+            defer list.deinit(alloc);
 
             while (iterator.next()) |val| {
-                const num = try std.fmt.parseInt(u4, val, 10);
-                try list.append(alloc, num);
+                const num = std.fmt.parseInt(u4, val, 10) catch |e| {
+                    std.log.err("failed to read {s} because {any}", .{ val, e });
+                    continue;
+                };
+                const rounded = if (num == 0) 0 else num - 1;
+                try list.append(alloc, rounded);
             }
             config.channels = try list.toOwnedSlice(alloc);
-            std.log.info("SET channels {d} \n", .{config.channels});
+            std.log.info("SET channels {any} \n", .{config.channels});
         }
     }
     return config;

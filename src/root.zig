@@ -47,7 +47,7 @@ pub fn run(alloc: Allocator) !void {
 
 pub fn testing() !void {
     print("TESTING", .{});
-    var state = MidiState.init(64, 1);
+    var state = MidiState.init(64, &[_]u4{ 0, 1 });
     _ = &state;
 
     for (0..16) |chan| {
