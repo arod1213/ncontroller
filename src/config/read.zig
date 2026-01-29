@@ -19,7 +19,7 @@ fn getInfo(line: []const u8) !struct { u8, ?u64 } {
     return .{ key, flag };
 }
 
-pub fn readConfig() !Config {
+pub fn readConfig(alloc: Allocator) !Config {
     const cwd = std.fs.cwd();
     const file = try cwd.openFile("./config.txt", .{});
     defer file.close();
@@ -51,6 +51,17 @@ pub fn readConfig() !Config {
             config.default_vol.key = .{ .val = key, .flags = flag, .down = true };
             config.default_vol.retrigger = false;
             std.log.info("SET {d} and {d}\n", .{ key, flag orelse 256 });
+        } else if (std.mem.startsWith(u8, item, "CHANNELS:")) {
+            var iterator = std.mem.splitAny(u8, item[11..], " ");
+            var list = try std.ArrayList(u4).initCapacity(alloc, 2);
+            defer list.deinit();
+
+            while (iterator.next()) |val| {
+                const num = try std.fmt.parseInt(u4, val, 10);
+                try list.append(alloc, num);
+            }
+            config.channels = try list.toOwnedSlice(alloc);
+            std.log.info("SET channels {d} \n", .{config.channels});
         }
     }
     return config;

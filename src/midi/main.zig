@@ -14,13 +14,13 @@ pub const MidiState = struct {
     mu: std.Thread.Mutex,
 
     vol: u7, // 0 to 127
-    ch: u4, // 0 to 16
+    ch: []const u4, // 0 to 16
 
     client: Client,
     source: Source,
 
     const Self = @This();
-    pub fn init(vol: u7, ch: u4) Self {
+    pub fn init(vol: u7, ch: []const u4) Self {
         const c = Client.init("ncontrol_client") catch @panic("failed to set client");
         const s = Source.init(&c, "ncontroller") catch @panic("failed to set source");
 
@@ -58,11 +58,13 @@ pub const MidiState = struct {
         }
 
         std.log.info("SENT {f}", .{m});
-        const midi_data = m.asData(self.ch);
-        self.source.send(midi_data) catch |e| {
-            std.log.err("failed to send midi: {any}", .{e});
-            return;
-        };
+        for (self.ch) |ch| {
+            const midi_data = m.asData(ch);
+            self.source.send(midi_data) catch |e| {
+                std.log.err("failed to send midi: {any}", .{e});
+                return;
+            };
+        }
     }
 };
 

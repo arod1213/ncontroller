@@ -103,6 +103,7 @@ pub const KeyCommand = struct {
 };
 
 pub const Config = struct {
+    channels: []const u4,
     vol_up: KeyCommand,
     vol_down: KeyCommand,
     default_vol: KeyCommand,
@@ -112,6 +113,7 @@ pub const Config = struct {
 
     pub fn default() Self {
         return .{
+            .channels = &[_]u8{ 0, 1 },
             .default_vol = KeyCommand.init(
                 .{ .val = 111, .flags = null, .down = true },
                 .{ .default_vol = 64 },
