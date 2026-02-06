@@ -35,9 +35,13 @@ pub fn run(alloc: Allocator) !void {
 
     while (true) {
         if (queue.take()) |press| {
-            // std.log.info("press is {f}\n", .{press.key});
             if (queue.settings.cmdFromKey(press)) |cmd| {
                 try state.handleMessage(cmdToMessage(&state, cmd.cmd));
+                if (cmd.trigger_per_ms == 0 or !cmd.retrigger) {
+                    queue.clear();
+                } else {
+                    std.Thread.sleep(std.time.ns_per_ms * cmd.trigger_per_ms);
+                }
             }
         }
         std.Thread.sleep(std.time.ns_per_ms * 3);
