@@ -3,71 +3,62 @@ const print = std.debug.print;
 const Allocator = std.mem.Allocator;
 const posix = std.posix;
 
-const keys = @import("keys");
-const config = keys.config;
-const KeyQueue = keys.KeyQueue;
+// pub const setup = @import("./setup.zig");
 
 const midi = @import("midi");
-pub const setup = @import("./setup.zig");
 const Client = midi.Client;
 const Source = midi.Source;
-const Message = midi.Message;
+const MidiMsg = midi.Msg;
 const MidiState = midi.MidiState;
 
-fn cmdToMessage(state: *const MidiState, cmd: config.Command) Message {
-    return switch (cmd) {
-        .vol_up => |x| Message{ .vol = state.vol +| x },
-        .vol_down => |x| Message{ .vol = state.vol -| x },
-        .default_vol => |x| Message{ .vol = x },
-        .mute => Message{ .mute = {} },
-    };
+const zigkeys = @import("zigkeys");
+const Key = zigkeys.Key;
+const Modifier = zigkeys.Modifier;
+
+const KC = zigkeys.KeyCommand(Msg);
+pub const Msg = union(enum) {
+    vol_up: u7,
+    vol_down: u7,
+    default_vol: u7,
+    mute,
+
+    const Self = @This();
+    pub fn format(self: Self, w: *std.Io.Writer) !void {
+        switch (self) {
+            .vol_up => |x| try w.print("vol up by {d}\n", .{x}),
+            .vol_down => |x| try w.print("vol down by {d}\n", .{x}),
+            .default_vol => |x| try w.print("set to default vol {d}\n", .{x}),
+            .mute => try w.print("toggle mute\n", .{}),
+        }
+    }
+
+    pub fn toMidiMsg(self: Self, state: *const MidiState) MidiMsg {
+        return switch (self) {
+            .vol_up => |x| MidiMsg{ .vol = state.vol +| x },
+            .vol_down => |x| MidiMsg{ .vol = state.vol -| x },
+            .default_vol => |x| MidiMsg{ .vol = x },
+            .mute => MidiMsg{ .mute = {} },
+        };
+    }
+};
+
+pub fn handle(state: *MidiState, k: KC) !void {
+    try state.handleMessage(k.cmd.toMidiMsg(state));
 }
 
 pub fn run(alloc: Allocator) !void {
-    const settings = try config.read.readConfig(alloc);
-
-    var state = MidiState.init(64, settings.channels);
-    var queue = KeyQueue.init(alloc, settings);
-    _ = &state;
-
-    const handle = try std.Thread.spawn(.{}, keys.handleKeys, .{&queue});
-    defer handle.join();
-
-    while (true) {
-        if (queue.take()) |press| {
-            if (queue.settings.cmdFromKey(press)) |cmd| {
-                try state.handleMessage(cmdToMessage(&state, cmd.cmd));
-                if (cmd.trigger_per_ms == 0 or !cmd.retrigger) {
-                    queue.clear();
-                } else {
-                    std.Thread.sleep(std.time.ns_per_ms * cmd.trigger_per_ms);
-                }
-            }
-        }
-        std.Thread.sleep(std.time.ns_per_ms * 3);
-    }
-    std.log.info("FINISHED", .{});
-}
-
-pub fn testing() !void {
-    print("TESTING", .{});
     var state = MidiState.init(64, &[_]u4{ 0, 1 });
     _ = &state;
 
-    for (0..16) |chan| {
-        for (0..127) |cc| {
-            std.log.info("running chan {d} cc {d}", .{ chan, cc });
+    const cmds = [_]KC{
+        KC.init(
+            Key.init(11, &[_]Modifier{.control}, true),
+            .mute,
+            false,
+            "mute",
+        ),
+    };
 
-            const down = midi.midiMsg(@intCast(chan), @intCast(cc), 0);
-            try state.handleMidi(down);
-
-            std.Thread.sleep(std.time.ns_per_ms * 50);
-
-            const up = midi.midiMsg(@intCast(chan), @intCast(cc), 127);
-            try state.handleMidi(up);
-
-            std.Thread.sleep(std.time.ns_per_ms * 50);
-        }
-    }
-    std.log.info("FINISHED", .{});
+    var settings = zigkeys.Config(Msg).init(&cmds);
+    try zigkeys.run(alloc, Msg, &settings, &state, handle);
 }

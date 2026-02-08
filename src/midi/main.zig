@@ -7,8 +7,7 @@ const posix = std.posix;
 const devices = @import("./devices.zig");
 pub const Client = devices.Client;
 pub const Source = devices.Source;
-pub const Message = devices.Message;
-pub const midiMsg = devices.midiMsg;
+pub const Msg = devices.Msg;
 
 pub const MidiState = struct {
     mu: std.Thread.Mutex,
@@ -48,7 +47,7 @@ pub const MidiState = struct {
         };
     }
 
-    pub fn handleMessage(self: *Self, m: Message) !void {
+    pub fn handleMessage(self: *Self, m: Msg) !void {
         self.mu.lock();
         defer self.mu.unlock();
 
@@ -67,20 +66,3 @@ pub const MidiState = struct {
         }
     }
 };
-
-// TODO: accept config to load in user key commands here
-const KeyCommand = struct { u8, ?u64, Message };
-pub fn msgFromKeys(state: *const MidiState, key: u8, flag: ?u64) ?Message {
-    const cmds = [_]KeyCommand{
-        .{ 111, 9437448, .{ .vol = state.vol +| 1 } }, // cmd + f12
-        .{ 103, 9437448, .{ .vol = state.vol -| 1 } }, // cmd + f11
-        .{ 109, 9437448, .{ .mute = {} } }, // cmd + f10
-    };
-    for (cmds) |cmd| {
-        const k, const f, const msg = cmd;
-        if (k == key and f == flag) {
-            return msg;
-        }
-    }
-    return null;
-}

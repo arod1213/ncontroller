@@ -9,10 +9,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
-    const config = b.addModule("config", .{
-        .root_source_file = b.path("src/config/main.zig"),
+    const zigkeys = b.dependency("zigkeys", .{
         .target = target,
+        .optimize = optimize,
     });
+    const zigkeys_mod = zigkeys.module("zigkeys");
 
     const midi = b.addModule("midi", .{
         .root_source_file = b.path("src/midi/main.zig"),
@@ -21,20 +22,11 @@ pub fn build(b: *std.Build) void {
     midi.linkFramework("CoreMidi", .{ .needed = true });
     midi.linkFramework("CoreFoundation", .{ .needed = true });
 
-    const keys = b.addModule("keys", .{
-        .root_source_file = b.path("src/keys/main.zig"),
-        .target = target,
-        .imports = &.{
-            .{ .name = "config", .module = config },
-        },
-    });
-    keys.linkFramework("CoreGraphics", .{ .needed = true });
-
     const mod = b.addModule("ncontroller", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .imports = &.{
-            .{ .name = "keys", .module = keys },
+            .{ .name = "zigkeys", .module = zigkeys_mod },
             .{ .name = "midi", .module = midi },
         },
     });

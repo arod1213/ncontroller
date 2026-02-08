@@ -75,7 +75,7 @@ pub fn midiMsg(channel: u8, cc: u8, val: u8) [3]u8 {
     return [_]u8{ 0xB0 + channel, cc, val };
 }
 
-pub const Message = union(enum) {
+pub const Msg = union(enum) {
     vol: u7, // 0 to 127
     mute,
 

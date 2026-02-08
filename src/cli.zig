@@ -3,14 +3,6 @@ const print = std.debug.print;
 const Allocator = std.mem.Allocator;
 const posix = std.posix;
 
-// TODO: use keys types here instead
-const KeyCommand = struct { u8, ?u64 }; // key + flag
-pub const KeyBindings = struct {
-    vol_up: KeyCommand,
-    vol_down: KeyCommand,
-    mute: KeyCommand,
-};
-
 pub const Mode = enum { config, testing, run };
 pub fn chooseMode(alloc: Allocator) !Mode {
     const args = try std.process.argsAlloc(alloc);

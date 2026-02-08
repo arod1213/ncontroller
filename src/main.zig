@@ -21,8 +21,8 @@ pub fn main() !void {
 
     const mode = try cli.chooseMode(alloc);
     switch (mode) {
-        .config => try ncontroller.setup.run(alloc),
+        .config => {},
         .run => try ncontroller.run(alloc),
-        .testing => try ncontroller.testing(),
+        .testing => {},
     }
 }
