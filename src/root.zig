@@ -3,71 +3,75 @@ const print = std.debug.print;
 const Allocator = std.mem.Allocator;
 const posix = std.posix;
 
-const keys = @import("keys");
-const config = keys.config;
+const keys = @import("zigkeys");
+const Key = keys.Key;
+const Modifier = keys.Modifier;
 const KeyQueue = keys.KeyQueue;
 
-const midi = @import("midi");
-pub const setup = @import("./setup.zig");
-const Client = midi.Client;
-const Source = midi.Source;
-const Message = midi.Message;
-const MidiState = midi.MidiState;
+const zmidi = @import("zmidi");
 
-fn cmdToMessage(state: *const MidiState, cmd: config.Command) Message {
-    return switch (cmd) {
-        .vol_up => |x| Message{ .vol = state.vol +| x },
-        .vol_down => |x| Message{ .vol = state.vol -| x },
-        .default_vol => |x| Message{ .vol = x },
-        .mute => Message{ .mute = {} },
-    };
+const Message = enum {
+    vol_up,
+    vol_down,
+    mute,
+};
+const T = keys.KeyCommand(Message);
+
+const State = struct {
+    mu: std.Thread.Mutex = std.Thread.Mutex{},
+    vol: u7,
+
+    channels: []const u8,
+
+    const Self = @This();
+    pub fn handleMessage(self: *Self, msg: Message) void {
+        self.mu.lock();
+        defer self.mu.unlock();
+
+        switch (msg) {
+            .vol_up => self.vol +|= 1,
+            .vol_down => self.vol -|= 1,
+            .mute => {},
+        }
+    }
+};
+
+fn handleMessage(ctx: *Ctx, kc: T) !void {
+    ctx.state.handleMessage(kc.cmd);
+    for (ctx.state.channels) |ch| {
+        switch (kc.cmd) {
+            .vol_up, .vol_down => {
+                const data = zmidi.midiMsg(ch, 1, @intCast(ctx.state.vol));
+                try ctx.midi_state.handleMidi(data);
+            },
+            .mute => {
+                const data = zmidi.midiMsg(ch, 2, 127);
+                try ctx.midi_state.handleMidi(data);
+            },
+        }
+    }
 }
+
+const Ctx = struct {
+    state: *State,
+    midi_state: *zmidi.MidiThroughput,
+};
 
 pub fn run(alloc: Allocator) !void {
-    const settings = try config.read.readConfig(alloc);
+    const destination = try zmidi.devices.getEndpointByName(alloc, "NControl");
+    var midi_state = try zmidi.MidiThroughput.init("client", "output", destination);
 
-    var state = MidiState.init(64, settings.channels);
-    var queue = KeyQueue.init(alloc, settings);
-    _ = &state;
+    var state = State{ .channels = &[_]u8{ 1, 2 }, .vol = 64 };
+    var ctx = Ctx{ .midi_state = &midi_state, .state = &state };
 
-    const handle = try std.Thread.spawn(.{}, keys.handleKeys, .{&queue});
-    defer handle.join();
+    const cmds = [_]T{.{
+        .cmd = .vol_up,
+        .key = Key.init(0, &[_]Modifier{.{ .shift = .either }}, true),
+        .retrigger = false,
+        .use = "",
+    }};
+    var key_handler = keys.Config(Message).init(&cmds);
+    // key_handler.should_log = true;
 
-    while (true) {
-        if (queue.take()) |press| {
-            if (queue.settings.cmdFromKey(press)) |cmd| {
-                try state.handleMessage(cmdToMessage(&state, cmd.cmd));
-                if (cmd.trigger_per_ms == 0 or !cmd.retrigger) {
-                    queue.clear();
-                } else {
-                    std.Thread.sleep(std.time.ns_per_ms * cmd.trigger_per_ms);
-                }
-            }
-        }
-        std.Thread.sleep(std.time.ns_per_ms * 3);
-    }
-    std.log.info("FINISHED", .{});
-}
-
-pub fn testing() !void {
-    print("TESTING", .{});
-    var state = MidiState.init(64, &[_]u4{ 0, 1 });
-    _ = &state;
-
-    for (0..16) |chan| {
-        for (0..127) |cc| {
-            std.log.info("running chan {d} cc {d}", .{ chan, cc });
-
-            const down = midi.midiMsg(@intCast(chan), @intCast(cc), 0);
-            try state.handleMidi(down);
-
-            std.Thread.sleep(std.time.ns_per_ms * 50);
-
-            const up = midi.midiMsg(@intCast(chan), @intCast(cc), 127);
-            try state.handleMidi(up);
-
-            std.Thread.sleep(std.time.ns_per_ms * 50);
-        }
-    }
-    std.log.info("FINISHED", .{});
+    try keys.run(alloc, Message, &key_handler, &ctx, handleMessage);
 }

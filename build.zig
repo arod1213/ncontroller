@@ -9,33 +9,29 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
-    const config = b.addModule("config", .{
-        .root_source_file = b.path("src/config/main.zig"),
-        .target = target,
-    });
+    // const config = b.addModule("config", .{
+    //     .root_source_file = b.path("src/config/main.zig"),
+    //     .target = target,
+    // });
 
-    const midi = b.addModule("midi", .{
-        .root_source_file = b.path("src/midi/main.zig"),
+    const zmidi_dep = b.dependency("zmidi", .{
         .target = target,
+        .optimize = optimize,
     });
-    midi.linkFramework("CoreMidi", .{ .needed = true });
-    midi.linkFramework("CoreFoundation", .{ .needed = true });
+    const zmidi = zmidi_dep.module("zmidi");
 
-    const keys = b.addModule("keys", .{
-        .root_source_file = b.path("src/keys/main.zig"),
+    const keys_dep = b.dependency("zigkeys", .{
         .target = target,
-        .imports = &.{
-            .{ .name = "config", .module = config },
-        },
+        .optimize = optimize,
     });
-    keys.linkFramework("CoreGraphics", .{ .needed = true });
+    const keys = keys_dep.module("zigkeys");
 
     const mod = b.addModule("ncontroller", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .imports = &.{
-            .{ .name = "keys", .module = keys },
-            .{ .name = "midi", .module = midi },
+            .{ .name = "zigkeys", .module = keys },
+            .{ .name = "zmidi", .module = zmidi },
         },
     });
 

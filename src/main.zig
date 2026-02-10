@@ -1,8 +1,9 @@
 const std = @import("std");
 const print = std.debug.print;
-const ncontroller = @import("ncontroller");
-const cli = @import("cli");
+const Allocator = std.mem.Allocator;
 const posix = std.posix;
+
+const ncontroller = @import("ncontroller");
 
 fn setupTermios(handle: posix.fd_t) !void {
     var settings = try posix.tcgetattr(handle);
@@ -18,11 +19,5 @@ pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
-
-    const mode = try cli.chooseMode(alloc);
-    switch (mode) {
-        .config => try ncontroller.setup.run(alloc),
-        .run => try ncontroller.run(alloc),
-        .testing => try ncontroller.testing(),
-    }
+    try ncontroller.run(alloc);
 }
