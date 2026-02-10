@@ -4,16 +4,6 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const cli = b.addModule("cli", .{
-        .root_source_file = b.path("src/cli.zig"),
-        .target = target,
-    });
-
-    // const config = b.addModule("config", .{
-    //     .root_source_file = b.path("src/config/main.zig"),
-    //     .target = target,
-    // });
-
     const zmidi_dep = b.dependency("zmidi", .{
         .target = target,
         .optimize = optimize,
@@ -43,7 +33,6 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .imports = &.{
                 .{ .name = "ncontroller", .module = mod },
-                .{ .name = "cli", .module = cli },
             },
         }),
     });

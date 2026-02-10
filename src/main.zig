@@ -14,10 +14,20 @@ fn setupTermios(handle: posix.fd_t) !void {
 
 pub fn main() !void {
     const stdin = std.fs.File.stdin();
-    try setupTermios(stdin.handle);
+    if (std.posix.isatty(stdin.handle)) {
+        setupTermios(stdin.handle) catch |err| {
+            std.debug.print("Warning: failed to setup terminal: {}\n", .{err});
+        };
+    }
 
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
-    try ncontroller.run(alloc);
+
+    var default_state = try ncontroller.config.defaultState(alloc);
+
+    for (default_state.channels) |ch| {
+        print("ch {d} ", .{ch});
+    }
+    try ncontroller.run(alloc, &default_state);
 }

@@ -37,8 +37,8 @@
             .hash = "zmidi-0.0.0-mCPkTqE4AADnwwmecTccBoJSvOdGOsX2snmDIx9uoA2X",
         },
         .zigkeys = .{
-            .url = "git+https://github.com/arod1213/zigkeys.git#f047d916d7aae229bbb9f9b85e13d376cb1c0306",
-            .hash = "zigkeys-0.0.0-muU9lGRXAAAEhsJgeOWUBNIk7xxX4bhQvH5qtbOpcYPi",
+            .url = "git+https://github.com/arod1213/zigkeys.git#518c1bca86f1075bf11b4194d3d06e20248bec19",
+            .hash = "zigkeys-0.0.0-muU9lIxYAACy2S1gFxQQ6fGKEXAVTsQbMD8iNvyYRGUc",
         },
     },
     .paths = .{

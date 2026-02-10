@@ -10,31 +10,11 @@ const KeyQueue = keys.KeyQueue;
 
 const zmidi = @import("zmidi");
 
-const Message = enum {
-    vol_up,
-    vol_down,
-    mute,
-};
+pub const config = @import("config.zig");
+const Message = config.Message;
+const State = config.State;
+
 const T = keys.KeyCommand(Message);
-
-const State = struct {
-    mu: std.Thread.Mutex = std.Thread.Mutex{},
-    vol: u7,
-
-    channels: []const u8,
-
-    const Self = @This();
-    pub fn handleMessage(self: *Self, msg: Message) void {
-        self.mu.lock();
-        defer self.mu.unlock();
-
-        switch (msg) {
-            .vol_up => self.vol +|= 1,
-            .vol_down => self.vol -|= 1,
-            .mute => {},
-        }
-    }
-};
 
 fn handleMessage(ctx: *Ctx, kc: T) !void {
     ctx.state.handleMessage(kc.cmd);
@@ -57,12 +37,11 @@ const Ctx = struct {
     midi_state: *zmidi.MidiThroughput,
 };
 
-pub fn run(alloc: Allocator) !void {
+pub fn run(alloc: Allocator, state: *State) !void {
     const destination = try zmidi.devices.getEndpointByName(alloc, "NControl");
     var midi_state = try zmidi.MidiThroughput.init("client", "output", destination);
 
-    var state = State{ .channels = &[_]u8{ 16, 17 }, .vol = 64 };
-    var ctx = Ctx{ .midi_state = &midi_state, .state = &state };
+    var ctx = Ctx{ .midi_state = &midi_state, .state = state };
 
     const trig_speed = 40;
     const cmds = [_]T{
