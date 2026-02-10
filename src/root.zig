@@ -41,11 +41,11 @@ fn handleMessage(ctx: *Ctx, kc: T) !void {
     for (ctx.state.channels) |ch| {
         switch (kc.cmd) {
             .vol_up, .vol_down => {
-                const data = zmidi.midiMsg(ch, 1, @intCast(ctx.state.vol));
+                const data = zmidi.midiMsg(0, ch, @intCast(ctx.state.vol));
                 try ctx.midi_state.handleMidi(data);
             },
             .mute => {
-                const data = zmidi.midiMsg(ch, 2, 127);
+                const data = zmidi.midiMsg(1, ch, 127);
                 try ctx.midi_state.handleMidi(data);
             },
         }
@@ -61,17 +61,53 @@ pub fn run(alloc: Allocator) !void {
     const destination = try zmidi.devices.getEndpointByName(alloc, "NControl");
     var midi_state = try zmidi.MidiThroughput.init("client", "output", destination);
 
-    var state = State{ .channels = &[_]u8{ 1, 2 }, .vol = 64 };
+    var state = State{ .channels = &[_]u8{ 16, 17 }, .vol = 64 };
     var ctx = Ctx{ .midi_state = &midi_state, .state = &state };
 
-    const cmds = [_]T{.{
-        .cmd = .vol_up,
-        .key = Key.init(0, &[_]Modifier{.{ .shift = .either }}, true),
-        .retrigger = false,
-        .use = "",
-    }};
-    var key_handler = keys.Config(Message).init(&cmds);
-    // key_handler.should_log = true;
-
+    const trig_speed = 40;
+    const cmds = [_]T{
+        .{
+            .cmd = .vol_up,
+            .key = Key.init(
+                111,
+                &[_]Modifier{
+                    .{ .command = .either },
+                    .{ .fn_key = {} },
+                },
+                true,
+            ),
+            .retrigger = true,
+            .trigger_per_ms = trig_speed,
+            .use = "Vol Up",
+        },
+        .{
+            .cmd = .vol_down,
+            .key = Key.init(
+                103,
+                &[_]Modifier{
+                    .{ .command = .either },
+                    .{ .fn_key = {} },
+                },
+                true,
+            ),
+            .retrigger = true,
+            .trigger_per_ms = trig_speed,
+            .use = "Vol Down",
+        },
+        .{
+            .cmd = .mute,
+            .key = Key.init(
+                109,
+                &[_]Modifier{
+                    .{ .command = .either },
+                    .{ .fn_key = {} },
+                },
+                true,
+            ),
+            .retrigger = false,
+            .use = "Mute",
+        },
+    };
+    const key_handler = keys.Config(Message).init(&cmds);
     try keys.run(alloc, Message, &key_handler, &ctx, handleMessage);
 }
