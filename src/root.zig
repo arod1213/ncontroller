@@ -12,7 +12,7 @@ const zmidi = @import("zmidi");
 
 pub const config = @import("config.zig");
 const Message = config.Message;
-const State = config.State;
+pub const State = config.State;
 
 const T = keys.KeyCommand(Message);
 

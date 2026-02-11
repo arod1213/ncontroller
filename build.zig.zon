@@ -40,6 +40,10 @@
             .url = "git+https://github.com/arod1213/zigkeys.git#518c1bca86f1075bf11b4194d3d06e20248bec19",
             .hash = "zigkeys-0.0.0-muU9lIxYAACy2S1gFxQQ6fGKEXAVTsQbMD8iNvyYRGUc",
         },
+        .menuczar = .{
+            .url = "git+https://github.com/arod1213/menuczar.git#c9cceabecc17aaa6ed3cdce535de82fbc0beff16",
+            .hash = "menuczar-0.0.0-k_xJK4gbAABUztGozI5KtFD1UD5iDrXNqdTUuLCqgAj4",
+        },
     },
     .paths = .{
         "build.zig",
